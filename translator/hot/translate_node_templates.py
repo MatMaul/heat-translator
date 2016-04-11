@@ -291,11 +291,24 @@ class TranslateNodeTemplates(object):
         # at this point, all the HOT resources should have been created
         # in the graph.
         for resource in self.hot_resources:
+            software_deploy_host_server = None
+            server_property = resource.properties.get('server')
+            if resource.type == 'OS::Heat::SoftwareDeployment' \
+                    and server_property:
+                server_name = \
+                    server_property.get('get_resource')
+                if server_name:
+                    software_deploy_host_server = \
+                        self.find_hot_resource(server_name)
+
             # traverse the reference chain to get the actual value
             inputs = resource.properties.get('input_values')
             if inputs:
                 for name, value in six.iteritems(inputs):
                     inputs[name] = self._translate_input(value, resource)
+                    if software_deploy_host_server is not None \
+                        and name in software_deploy_host_server.properties:
+                        software_deploy_host_server.properties.pop(name)
 
         return self.hot_resources
 

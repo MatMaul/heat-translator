@@ -121,7 +121,15 @@ class HotResource(object):
                 # hosting_server is None if requirements is None
                 hosting_on_server = (hosting_server.name if
                                      hosting_server else None)
-                if operation.name == reserve_current:
+                base_type = HotResource.get_base_type(
+                    self.nodetemplate.type_definition).type
+                # handle interfaces directly defined on a compute
+                if hosting_on_server is None \
+                    and base_type == 'tosca.nodes.Compute':
+                    hosting_on_server = self.name
+
+                if operation.name == reserve_current and \
+                    base_type == 'tosca.nodes.SoftwareComponent':
                     deploy_resource = self
                     self.name = deploy_name
                     self.type = 'OS::Heat::SoftwareDeployment'
