@@ -305,7 +305,14 @@ class TranslateNodeTemplates(object):
             inputs = resource.properties.get('input_values')
             if inputs:
                 for name, value in six.iteritems(inputs):
-                    inputs[name] = self._translate_input(value, resource)
+                    translated_input = value
+                    while True:
+                        current_translated_input = self._translate_input(translated_input, resource)
+                        if current_translated_input == translated_input:
+                            break
+                        else:
+                            translated_input = current_translated_input
+                    inputs[name] = translated_input
                     if software_deploy_host_server is not None \
                         and name in software_deploy_host_server.properties:
                         software_deploy_host_server.properties.pop(name)
@@ -320,17 +327,25 @@ class TranslateNodeTemplates(object):
         if isinstance(input_value, dict) and 'get_property' in input_value:
             get_property_args = input_value['get_property']
         if get_property_args is not None:
-            hot_target = self._find_hot_resource_for_tosca(
-                get_property_args[0], resource)
-            if hot_target:
-                props = hot_target.get_tosca_props()
-                prop_name = get_property_args[1]
-                if prop_name in props:
-                    return props[prop_name]
+            tosca_target = resource.nodetemplate
+            for i in range(0, len(get_property_args)-1):
+                tosca_target = self._find_tosca_node(get_property_args[i], tosca_target)
+                if tosca_target:
+                    prop_name = get_property_args[i+1]
+
+                    for prop in tosca_target.get_properties_objects():
+                        if prop_name == prop.name:
+                            return prop.value
+
+                    cap = tosca_target.get_capability(get_property_args[i])
+                    if cap:
+                        for prop in cap.get_properties_objects():
+                            if prop_name == prop.name:
+                                return prop.value
         elif isinstance(input_value, GetAttribute):
             # for the attribute
             # get the proper target type to perform the translation
-            args = input_value.result()
+            args = input_value.args
             hot_target = self._find_hot_resource_for_tosca(args[0], resource)
 
             return hot_target.get_hot_attribute(args[1], args)
@@ -423,23 +438,25 @@ class TranslateNodeTemplates(object):
             if resource.name == name:
                 return resource
 
-    def _find_tosca_node(self, tosca_name):
+    def _find_tosca_node(self, tosca_name, current_tosca_template=None):
+        if tosca_name == 'SELF':
+            return current_tosca_template
+        if current_tosca_template is not None:
+            if tosca_name == 'HOST':
+                tosca_name = 'host'
+            for req in current_tosca_template.requirements:
+                if tosca_name in req:
+                    return self._find_tosca_node(req[tosca_name])
+
         for node in self.nodetemplates:
             if node.name == tosca_name:
                 return node
 
     def _find_hot_resource_for_tosca(self, tosca_name,
                                      current_hot_resource=None):
-        if tosca_name == 'SELF':
-            return current_hot_resource
-        if tosca_name == 'HOST' and current_hot_resource is not None:
-            for req in current_hot_resource.nodetemplate.requirements:
-                if 'host' in req:
-                    return self._find_hot_resource_for_tosca(req['host'])
-
-        for node in self.nodetemplates:
-            if node.name == tosca_name:
-                return self.hot_lookup[node]
+        tosca_node = self._find_tosca_node(tosca_name, current_hot_resource.nodetemplate)
+        if tosca_node:
+            return self.hot_lookup[tosca_node]
 
         return None
 
