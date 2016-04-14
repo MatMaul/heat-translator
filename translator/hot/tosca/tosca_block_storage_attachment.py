@@ -42,7 +42,7 @@ class ToscaBlockStorageAttachment(HotResource):
         self.properties['instance_uuid'] = self.instance_uuid
         self.properties['volume_id'] = self.volume_id
         if 'location' in self.properties:
-            self.properties['mountpoint'] = self.properties.pop('location')
+            self.properties.pop('location')
 
         # TOSCA type can have a device name specified,
         # this is unsupported by Heat

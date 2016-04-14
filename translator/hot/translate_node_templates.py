@@ -454,7 +454,8 @@ class TranslateNodeTemplates(object):
 
     def _find_hot_resource_for_tosca(self, tosca_name,
                                      current_hot_resource=None):
-        tosca_node = self._find_tosca_node(tosca_name, current_hot_resource.nodetemplate)
+        current_tosca_resource = current_hot_resource.nodetemplate if current_hot_resource else None
+        tosca_node = self._find_tosca_node(tosca_name, current_tosca_resource)
         if tosca_node:
             return self.hot_lookup[tosca_node]
 

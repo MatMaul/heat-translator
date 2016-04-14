@@ -149,7 +149,7 @@ class HotResource(object):
                     hosting_on_server = self.name
 
                 if operation.name == reserve_current and \
-                    base_type == 'tosca.nodes.SoftwareComponent':
+                    base_type != 'tosca.nodes.Compute':
                     deploy_resource = self
                     self.name = deploy_name
                     self.type = 'OS::Heat::SoftwareDeployment'
