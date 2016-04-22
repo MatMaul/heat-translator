@@ -219,9 +219,11 @@ class TranslateNodeTemplates(object):
         # into multiple HOT resources and may change their name
         lifecycle_resources = []
         for resource in self.hot_resources:
-            expanded = resource.handle_life_cycle()
-            if expanded:
-                lifecycle_resources += expanded
+            expanded_resources, deploy_lookup = resource.handle_life_cycle()
+            if expanded_resources:
+                lifecycle_resources += expanded_resources
+            if deploy_lookup:
+                self.hot_lookup.update(deploy_lookup)
         self.hot_resources += lifecycle_resources
 
         # Handle configuration from ConnectsTo relationship in the TOSCA node:
@@ -368,6 +370,28 @@ class TranslateNodeTemplates(object):
                 return {'get_param': input_value.args[0]}
             else:
                 return {'get_param': input_value.args}
+        elif isinstance(input_value, dict) and 'get_operation_output' in input_value:
+            get_operation_output_args = input_value['get_operation_output']
+            tosca_target = self._find_tosca_node(get_operation_output_args[0], resource.nodetemplate)
+            if tosca_target:
+                operations = HotResource.get_all_operations(tosca_target)
+                # ignore Standard interface name,
+                # it is the only one supported in the translator anyway
+                op_name = get_operation_output_args[2]
+                output_name = get_operation_output_args[3]
+                if op_name in operations:
+                    operation = operations[op_name]
+                    if operation in self.hot_lookup:
+                        matching_deploy = self.hot_lookup[operation]
+                        matching_config_name = matching_deploy.properties['config']['get_resource']
+                        matching_config = self.find_hot_resource(matching_config_name)
+                        if matching_config:
+                            outputs = matching_config.properties.get('outputs')
+                            if outputs is None:
+                                outputs = []
+                            outputs.append({'name': output_name})
+                            matching_config.properties['outputs'] = outputs
+                        return {'get_attr': [matching_deploy.name, output_name]}
 
         return input_value
 

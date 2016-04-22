@@ -104,7 +104,7 @@ class HotResource(object):
         # scenarios and cannot be fixed or hard coded here
         operations_deploy_sequence = ['create', 'configure', 'start']
 
-        operations = HotResource._get_all_operations(self.nodetemplate)
+        operations = HotResource.get_all_operations(self.nodetemplate)
 
         # create HotResource for each operation used for deployment:
         # create, start, configure
@@ -156,7 +156,7 @@ class HotResource(object):
                     self.properties = {'config': {'get_resource': config_name},
                                        'server': {'get_resource':
                                                   hosting_on_server}}
-                    deploy_lookup[operation.name] = self
+                    deploy_lookup[operation] = self
                 else:
                     sd_config = {'config': {'get_resource': config_name},
                                  'server': {'get_resource':
@@ -167,7 +167,7 @@ class HotResource(object):
                                     'OS::Heat::SoftwareDeployment',
                                     sd_config)
                     hot_resources.append(deploy_resource)
-                    deploy_lookup[operation.name] = deploy_resource
+                    deploy_lookup[operation] = deploy_resource
                 lifecycle_inputs = self._get_lifecycle_inputs(operation)
                 if lifecycle_inputs:
                     deploy_resource.properties['input_values'] = \
@@ -179,10 +179,10 @@ class HotResource(object):
         group = {}
         for op, hot in deploy_lookup.items():
             # position to determine potential preceding nodes
-            op_index = operations_deploy_sequence.index(op)
-            for preceding_op in \
+            op_index = operations_deploy_sequence.index(op.name)
+            for preceding_op_name in \
                     reversed(operations_deploy_sequence[:op_index]):
-                preceding_hot = deploy_lookup.get(preceding_op)
+                preceding_hot = deploy_lookup.get(operations.get(preceding_op_name))
                 if preceding_hot:
                     hot.depends_on.append(preceding_hot)
                     hot.depends_on_nodes.append(preceding_hot)
@@ -194,7 +194,7 @@ class HotResource(object):
         for hot in hot_resources:
             hot.group_dependencies.update(group)
 
-        return hot_resources
+        return hot_resources, deploy_lookup
 
     def handle_connectsto(self, tosca_source, tosca_target, hot_source,
                           hot_target, config_location, operation):
@@ -341,7 +341,7 @@ class HotResource(object):
         return tosca_props
 
     @staticmethod
-    def _get_all_operations(node):
+    def get_all_operations(node):
         operations = {}
         for operation in node.interfaces:
             operations[operation.name] = operation
