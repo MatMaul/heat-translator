@@ -319,6 +319,14 @@ class TranslateNodeTemplates(object):
                         and name in software_deploy_host_server.properties:
                         software_deploy_host_server.properties.pop(name)
 
+        to_remove = []
+        for resource in self.hot_resources:
+            if resource.type is None:
+                to_remove.append(resource)
+
+        for resource in to_remove:
+            self.hot_resources.remove(resource)
+
         return self.hot_resources
 
     def _translate_input(self, input_value, resource):

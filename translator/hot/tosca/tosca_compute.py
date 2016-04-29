@@ -98,7 +98,8 @@ class ToscaCompute(HotResource):
         self.properties['user_data_format'] = 'SOFTWARE_CONFIG'
         tosca_props = self.get_tosca_props()
         for key, value in tosca_props.items():
-            self.properties[key] = value
+            if key != 'public_ip':
+                self.properties[key] = value
 
     # To be reorganized later based on new development in Glance and Graffiti
     def translate_compute_flavor_and_image(self,
