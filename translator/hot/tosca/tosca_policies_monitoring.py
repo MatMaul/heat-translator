@@ -52,7 +52,7 @@ class ToscaMonitoring(HotResource):
                 extra_resources.append(mon_resources)
         return extra_resources
 
-    def handle_properties(self):
+    def handle_properties(self, resources):
         self.properties = {}
         if self.policy.entity_tpl.get('triggers'):
             triggers = self.policy.entity_tpl["triggers"]
@@ -60,7 +60,6 @@ class ToscaMonitoring(HotResource):
             self.filter.append(trigger_name)
             self.properties = self._get_monitoring_prop(trigger_dict)
             self.name = trigger_name
-        return self.properties
 
     def _get_monitoring_prop(self, trigger):
         sample = trigger.get('condition')
@@ -77,6 +76,3 @@ class ToscaMonitoring(HotResource):
         prop["comparison_operator"] = sample.get('comparison_operator')
         prop['evaluation_periods'] = sample.get('evaluations')
         return prop
-
-    def embed_substack_templates(self, hot_template_version):
-        pass

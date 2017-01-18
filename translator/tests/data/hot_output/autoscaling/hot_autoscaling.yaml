@@ -5,20 +5,20 @@ description: >
 
 parameters: {}
 resources:
-  asg_group:
+  asg:
     type: OS::Heat::AutoScalingGroup
     properties:
       min_size: 2
       desired_capacity: 3
       cooldown: 60
       resource:
-        type: asg_res.yaml
+        type: hot_autoscaling_asg.yaml
       max_size: 10
   asg_scale_out:
     type: OS::Heat::ScalingPolicy
     properties:
       auto_scaling_group_id:
-        get_resource: asg_group
+        get_resource: asg
       adjustment_type: change_in_capacity
       scaling_adjustment: 1
       cooldown: 60
@@ -26,7 +26,7 @@ resources:
     type: OS::Heat::ScalingPolicy
     properties:
       auto_scaling_group_id:
-        get_resource: asg_group
+        get_resource: asg
       adjustment_type: change_in_capacity
       scaling_adjustment: -1
       cooldown: 60

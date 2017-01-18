@@ -34,7 +34,7 @@ class ToscaNetwork(HotResource):
                                            csar_dir=csar_dir)
         pass
 
-    def handle_properties(self):
+    def handle_properties(self, resources):
         tosca_props = self.get_tosca_props()
 
         net_props = {}
@@ -92,7 +92,7 @@ class ToscaNetwork(HotResource):
         if 'network_id' in tosca_props:
             subnet_props['network'] = tosca_props['network_id']
         else:
-            subnet_props['network'] = '{ get_resource: %s }' % (self.name)
+            subnet_props['network'] = {'get_resource': self.name}
 
         # Handle allocation pools
         # Do this only if both start_ip and end_ip are provided

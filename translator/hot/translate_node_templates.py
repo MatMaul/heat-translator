@@ -11,7 +11,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import copy
 import importlib
 import logging
 import os
@@ -140,9 +139,6 @@ TOSCA_TO_HOT_TYPE = _generate_type_map()
 
 BASE_TYPES = six.string_types + six.integer_types + (dict, OrderedDict)
 
-HOT_SCALING_POLICY_TYPE = ["OS::Heat::AutoScalingGroup",
-                           "OS::Senlin::Profile"]
-
 
 class TranslateNodeTemplates(object):
     '''Translate TOSCA NodeTemplates to Heat Resources.'''
@@ -162,7 +158,6 @@ class TranslateNodeTemplates(object):
         # useful to satisfy underlying dependencies between interfaces
         self.last_deploy_map = {}
         self.hot_template_version = None
-        self.processed_policy_res = []
 
     def translate(self):
         return self._translate_nodetemplates()
@@ -176,41 +171,7 @@ class TranslateNodeTemplates(object):
         for depend_on in resource.depends_on_nodes:
             self._recursive_handle_properties(depend_on)
 
-        if resource.type == "OS::Nova::ServerGroup":
-            resource.handle_properties(self.hot_resources)
-        elif resource.type in ("OS::Heat::ScalingPolicy",
-                               "OS::Senlin::Policy"):
-            if resource.name in self.processed_policy_res:
-                return
-            self.processed_policy_res.append(resource.name)
-            self.hot_resources = \
-                resource.handle_properties(self.hot_resources)
-            extra_hot_resources = []
-            for res in self.hot_resources:
-                if res.type == 'OS::Heat::ScalingPolicy':
-                    extra_res = copy.deepcopy(res)
-                    scaling_adjustment = res.properties['scaling_adjustment']
-                    if scaling_adjustment < 0:
-                        res.name = res.name + '_scale_in'
-                        extra_res.name = extra_res.name + '_scale_out'
-                        extra_res.properties['scaling_adjustment'] = \
-                            -1 * scaling_adjustment
-                        extra_hot_resources.append(extra_res)
-                        self.processed_policy_res.append(res.name)
-                        self.processed_policy_res.append(extra_res.name)
-                    elif scaling_adjustment > 0:
-                        res.name = res.name + '_scale_out'
-                        extra_res.name = extra_res.name + '_scale_in'
-                        extra_res.properties['scaling_adjustment'] = \
-                            -1 * scaling_adjustment
-                        extra_hot_resources.append(extra_res)
-                        self.processed_policy_res.append(res.name)
-                        self.processed_policy_res.append(extra_res.name)
-                    else:
-                        continue
-            self.hot_resources += extra_hot_resources
-        else:
-            resource.handle_properties()
+        resource.handle_properties(self.hot_resources)
 
     def _translate_nodetemplates(self):
         log.debug(_('Translating the node templates.'))
@@ -265,21 +226,16 @@ class TranslateNodeTemplates(object):
                         node._properties.append(prop)
 
         for policy in self.policies:
-            policy_type = policy.type_definition
-            if policy.is_derived_from('tosca.policies.Scaling') and \
-               policy_type.type != 'tosca.policies.Scaling.Cluster':
-                TOSCA_TO_HOT_TYPE[policy_type.type] = \
-                    TOSCA_TO_HOT_TYPE['tosca.policies.Scaling']
-            if policy.is_derived_from('tosca.policies.Monitoring'):
-                TOSCA_TO_HOT_TYPE[policy_type.type] = \
-                    TOSCA_TO_HOT_TYPE['tosca.policies.Monitoring']
-            if not policy.is_derived_from('tosca.policies.Monitoring') and \
-                    not policy.is_derived_from('tosca.policies.Scaling') and \
-                    policy_type.type not in TOSCA_TO_HOT_TYPE:
-                raise UnsupportedTypeError(type=_('%s') % policy_type.type)
-            elif policy_type.type == 'tosca.policies.Scaling.Cluster':
-                self.hot_template_version = '2016-04-08'
-            policy_node = TOSCA_TO_HOT_TYPE[policy_type.type](policy)
+            if policy.type_definition.type in TOSCA_TO_HOT_TYPE:
+                policy_base_type = policy.type_definition.type
+            else:
+                policy_base_type = HotResource.get_base_type_str(
+                    policy.type_definition)
+
+            if policy_base_type not in TOSCA_TO_HOT_TYPE:
+                raise UnsupportedTypeError(type=_('%s') % policy_base_type)
+            policy_node = TOSCA_TO_HOT_TYPE[policy_base_type](
+                policy, csar_dir=self.csar_dir)
             self.hot_resources.append(policy_node)
 
         # Handle life cycle operations: this may expand each node
@@ -342,8 +298,8 @@ class TranslateNodeTemplates(object):
 
                 last_deploy = self.last_deploy_map.get(
                     self.hot_lookup[node_depend])
-                if last_deploy and \
-                    last_deploy not in self.hot_lookup[node].depends_on:
+                if last_deploy and last_deploy not in \
+                        self.hot_lookup[node].depends_on:
                     self.hot_lookup[node].depends_on.append(last_deploy)
                     self.hot_lookup[node].depends_on_nodes.append(last_deploy)
 
@@ -357,9 +313,8 @@ class TranslateNodeTemplates(object):
         # Use recursion to handle the properties of the
         # dependent nodes in correct order
         self.processed_resources = []
-        for resource in self.hot_resources:
-            if resource.type not in HOT_SCALING_POLICY_TYPE:
-                self._recursive_handle_properties(resource)
+        for resource in list(self.hot_resources):
+            self._recursive_handle_properties(resource)
 
         # handle resources that need to expand to more than one HOT resource
         expansion_resources = []

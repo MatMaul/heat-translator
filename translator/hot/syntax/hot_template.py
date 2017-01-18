@@ -13,7 +13,6 @@
 
 from collections import OrderedDict
 import logging
-import os
 import textwrap
 from toscaparser.utils.gettextutils import _
 import yaml
@@ -45,25 +44,39 @@ class HotTemplate(object):
             nodes.append((node_key, node_value))
         return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', nodes)
 
+    def get_hot_version(self):
+        hot_template_version = self.LATEST
+        for resource in self.resources:
+            resource_version = resource.get_hot_version()
+            if resource_version > hot_template_version:
+                hot_template_version = resource_version
+        return hot_template_version
+
     def output_to_yaml_files_dict(self, base_filename,
-                                  hot_template_version=LATEST):
+                                  hot_template_version=None):
         yaml_files_dict = {}
-        base_filename, ext = os.path.splitext(base_filename)
 
         # convert from inlined substack to a substack defined in another file
+        resources_to_remove = []
         for resource in self.resources:
-            yaml_files_dict.update(
-                resource.extract_substack_templates(base_filename,
-                                                    hot_template_version))
+            substacks, substacks_resources = resource.extract_substack_templates(base_filename, hot_template_version)
+            yaml_files_dict.update(substacks)
+            resources_to_remove.extend(substacks_resources)
 
-        yaml_files_dict[base_filename + ext] = \
-            self.output_to_yaml(hot_template_version, False)
+        for r in resources_to_remove:
+            self.resources.remove(r)
+
+        yaml_files_dict[base_filename] = \
+            self.output_to_yaml(False, hot_template_version)
 
         return yaml_files_dict
 
-    def output_to_yaml(self, hot_template_version=LATEST,
-                       embed_substack_templates=True):
+    def output_to_yaml(self, embed_substack_templates=True,
+                       hot_template_version=None):
         log.debug(_('Converting translated output to yaml format.'))
+
+        if not hot_template_version:
+            hot_template_version = self.get_hot_version()
 
         if embed_substack_templates:
             # fully inlined substack by storing the template as a blob string

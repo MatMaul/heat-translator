@@ -20,6 +20,8 @@ from toscaparser.elements.interfaces import InterfacesDef
 from toscaparser.functions import GetInput
 from toscaparser.nodetemplate import NodeTemplate
 from toscaparser.utils.gettextutils import _
+from translator.hot.syntax.hot_parameter import HotParameter
+from translator.hot.syntax.hot_template import HotTemplate
 
 
 SECTIONS = (TYPE, PROPERTIES, MEDADATA, DEPENDS_ON, UPDATE_POLICY,
@@ -103,7 +105,7 @@ class HotResource(object):
         # generated in the output yaml.
         self.hide_resource = False
 
-    def handle_properties(self):
+    def handle_properties(self, resources):
         # the property can hold a value or the intrinsic function get_input
         # for value, copy it
         # for get_input, convert to get_param
@@ -173,7 +175,7 @@ class HotResource(object):
                                     {'get_file': get_file}},
                                 csar_dir=self.csar_dir))
                 if operation.name == reserve_current and \
-                    base_type != 'tosca.nodes.Compute':
+                        base_type != 'tosca.nodes.Compute':
                     deploy_resource = self
                     self.name = deploy_name
                     self.type = sw_deploy_res
@@ -345,7 +347,7 @@ class HotResource(object):
                     host_server['get_resource'].name
 
             elif isinstance(host_server, dict) and \
-                not host_server.get('get_resource'):
+                    not host_server.get('get_resource'):
                 self.properties['servers'] = \
                     host_server
 
@@ -361,7 +363,7 @@ class HotResource(object):
     #
     # return a dict of filename-content
     def extract_substack_templates(self, base_filename, hot_template_version):
-        return {}
+        return {}, []
 
     # this function asks the resource to embed substacks
     # into the main template, if any.
@@ -449,6 +451,9 @@ class HotResource(object):
         else:
             return False
 
+    def get_hot_version(self):
+        return '2013-05-23'
+
     def get_hot_attribute(self, attribute, args):
         # this is a place holder and should be implemented by the subclass
         # if translation is needed for the particular attribute
@@ -463,6 +468,147 @@ class HotResource(object):
             else:
                 tosca_props[prop.name] = prop.value
         return tosca_props
+
+    # This method will create a substack including the scalable resource
+    # and its dependencies like SoftwareDeployments and Port
+    @staticmethod
+    def create_substack_from_servers(servers, hot_resources):
+        substack_template = HotTemplate()
+        dependent_resources = list(servers)
+        substack_parameters = {}
+
+        # supporting networks
+        supporting_networks = {}
+
+        for server in servers:
+            # gather ports
+            if 'networks' in server.properties:
+                networks = server.properties['networks']
+                for network in networks:
+                    if 'port' in network:
+                        port_name = network['port']['get_resource']
+                        port_resource = HotResource.find_hot_resource(
+                            hot_resources, port_name)
+                        dependent_resources.append(port_resource)
+                        network_name = port_resource.properties['network']
+                        if 'get_resource' in network_name:
+                            # the network will be passed as
+                            # a param to the stack
+                            net_param_name = network_name + '_id'
+                            port_resource.properties['network'] = \
+                                {'get_param': net_param_name}
+                            supporting_networks[network_name] = net_param_name
+
+            # first deployments hosted by this server
+            for resource in hot_resources:
+                if resource.type == 'OS::Heat::SoftwareDeployment' and \
+                        resource.properties['server']['get_resource'] == \
+                        server.name:
+                    dependent_resources.append(resource)
+                    config_resource = HotResource.find_hot_resource(
+                        hot_resources,
+                        resource.properties['config']['get_resource'])
+                    dependent_resources.append(config_resource)
+
+        # now gather explicit dependencies of those deployments
+        # and of the server
+        dependent_resources_to_append = list(servers)
+        while dependent_resources_to_append:
+            dependent_resources_to_append = []
+            for dependent_resource in dependent_resources:
+                for resource in hot_resources:
+                    if resource.type == 'OS::Heat::SoftwareDeployment' \
+                            and dependent_resource in resource.depends_on \
+                            and resource not in dependent_resources:
+                        dependent_resources_to_append.append(resource)
+                        config_resource = HotResource.find_hot_resource(
+                            hot_resources,
+                            resource.properties['config']['get_resource'])
+
+                        resource.properties['config'].pop('get_resource')
+                        param_name = config_resource.name + '_id'
+                        resource.properties['config']['get_param'] = \
+                            param_name
+
+                        substack_template.parameters. \
+                            append(HotParameter(param_name, "string"))
+                        substack_parameters[param_name] = \
+                            {'get_resource': config_resource.name}
+
+                        # explicit dependency hosted on a different
+                        # compute server : pass the server reference
+                        # through a substack parameter
+                        host_server_name = resource.properties['server'] \
+                            .pop('get_resource')
+                        resource.properties['server']['get_param'] = \
+                            host_server_name
+
+                        substack_template.parameters. \
+                            append(HotParameter(host_server_name, "string"))
+                        substack_parameters[host_server_name] = \
+                            {'get_resource': host_server_name}
+
+            dependent_resources.extend(dependent_resources_to_append)
+
+        external_dependencies = []
+        for dependent_resource in dependent_resources:
+            # move outside dependency references from the resources
+            # inside the substack to the substack def itself
+            deps_to_remove = []
+            for external_dep in dependent_resource.depends_on:
+                if external_dep not in dependent_resources:
+                    external_dependencies.append(external_dep)
+                    deps_to_remove.append(external_dep)
+            for resource in deps_to_remove:
+                dependent_resource.depends_on.remove(resource)
+
+            # move external inputs from the deployment to the substack def
+            if 'input_values' in dependent_resource.properties:
+                input_values = dependent_resource.properties['input_values']
+                for input in input_values:
+                    val = input_values[input]
+                    if isinstance(val, dict) and 'get_attr' in val:
+                        target_resource = HotResource.find_hot_resource(
+                            hot_resources, val['get_attr'][0])
+                        if target_resource not in dependent_resources:
+                            qualified_param_name = dependent_resource.name \
+                                + '_' + input
+                            substack_template.parameters.append(
+                                HotParameter(qualified_param_name, "string"))
+                            substack_parameters[qualified_param_name] = val
+                            input_values[input] = {'get_param':
+                                                   qualified_param_name}
+
+        for network in supporting_networks:
+            net_param_name = supporting_networks[network]
+            substack_template.parameters.append(
+                HotParameter(net_param_name, "string"))
+            substack_parameters[net_param_name] = {'get_resource': network}
+
+        substack_template.resources = dependent_resources
+
+        # add standardized TOSCA attributes for addresses of a Compute node
+        # TODO(mvelten) Correctly handle networks here
+        # substack_template.outputs.append(
+        #     HotOutput('public_address',
+        #               {'get_attr':
+        #                    [server.name, 'networks', 'private', 0]}))
+        # substack_template.outputs.append(
+        #     HotOutput('private_address',
+        #               {'get_attr':
+        #                    [server.name, 'networks', 'private', 0]}))
+
+        # substack_template.outputs.append(
+        #     HotOutput('first_address',
+        #               {'get_attr': [server.name, 'first_address']}))
+
+        return substack_template, substack_parameters, external_dependencies
+
+    @staticmethod
+    def find_hot_resource(hot_resources, name):
+        for resource in hot_resources:
+            if resource.name == name:
+                return resource
 
     @staticmethod
     def get_all_artifacts(nodetemplate):

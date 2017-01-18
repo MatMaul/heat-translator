@@ -160,6 +160,8 @@ class ToscaClusterAutoscaling(HotResource):
             props["min_size"] = temp["min_instances"]
             props["max_size"] = temp["max_instances"]
             props["desired_capacity"] = temp["default_instances"]
+            if "cooldown" in temp:
+                props["cooldown"] = temp["cooldown"]
             self.cluster_name = '%s_cluster' % node
             cluster_resources = \
                 HotResource(self.nodetemplate,
@@ -193,3 +195,6 @@ class ToscaClusterAutoscaling(HotResource):
                             properties=scale_in_props)
             resources.append(policy_resources)
         return resources
+
+    def get_hot_version(self):
+        return '2016-04-08'

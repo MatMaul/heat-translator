@@ -36,7 +36,7 @@ class ToscaNetworkPort(HotResource):
         '''Generate compute networks property list from the port resources.'''
         networks = []
         for resource in port_resources:
-            networks.append({'port': '{ get_resource: %s }' % (resource.name)})
+            networks.append({'port': {'get_resource': resource.name}})
         return networks
 
     def _insert_sorted_resource(self, resources, resource):
@@ -51,7 +51,7 @@ class ToscaNetworkPort(HotResource):
                 lo = mid + 1
         resources.insert(lo, resource)
 
-    def handle_properties(self):
+    def handle_properties(self, resources):
         tosca_props = self.get_tosca_props()
         port_props = {}
         for key, value in tosca_props.items():
@@ -90,8 +90,7 @@ class ToscaNetworkPort(HotResource):
                     port_props['network'] =\
                         str(network_resource.existing_resource_id)
                 else:
-                    port_props['network'] = '{ get_resource: %s }'\
-                        % (links_to.name)
+                    port_props['network'] = {'get_resource': links_to.name}
 
             # Check for BindsTo relationship. If found add network to the
             # network property of the corresponding compute resource

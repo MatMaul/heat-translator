@@ -33,13 +33,12 @@ class ToscaPoicyTest(TestCase):
         try:
             nodetemplate = NodeTemplate(name, nodetemplates)
             toscacompute = ToscaCompute(nodetemplate)
-            toscacompute.handle_properties()
+            toscacompute.handle_properties([])
 
             policy = Policy(policy_name, tpl, targets,
                             "node_templates")
             toscapolicy = ToscaPolicies(policy)
-            nodetemplate = [toscacompute]
-            toscapolicy.handle_properties(nodetemplate)
+            toscapolicy.handle_properties([toscacompute])
 
             self.assertEqual(toscacompute.properties, expectedprops)
         except Exception:

@@ -26,5 +26,5 @@ class ToscaDbms(HotResource):
         super(ToscaDbms, self).__init__(nodetemplate, csar_dir=csar_dir)
         pass
 
-    def handle_properties(self):
+    def handle_properties(self, resources):
         pass

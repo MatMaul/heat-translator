@@ -522,7 +522,7 @@ class ToscaHotTranslationTest(TestCase):
         tosca_file = '../tests/data/autoscaling/tosca_autoscaling.yaml'
         hot_files = [
             '../tests/data/hot_output/autoscaling/hot_autoscaling.yaml',
-            '../tests/data/hot_output/autoscaling/asg_res.yaml',
+            '../tests/data/hot_output/autoscaling/hot_autoscaling_asg.yaml',
             ]
         params = {}
         self._test_successful_translation(tosca_file, hot_files, params)
@@ -551,7 +551,7 @@ class ToscaHotTranslationTest(TestCase):
         tosca_file = '../tests/data/nfv/test_tosca_nfv_autoscaling.yaml'
         hot_files = [
             '../tests/data/hot_output/nfv/hot_tosca_nfv_autoscaling.yaml',
-            '../tests/data/hot_output/nfv/SP1_res.yaml',
+            '../tests/data/hot_output/nfv/hot_tosca_nfv_autoscaling_SP1.yaml',
             ]
         params = {}
         self._test_successful_translation(tosca_file, hot_files, params)
@@ -560,7 +560,8 @@ class ToscaHotTranslationTest(TestCase):
         tosca_file = '../tests/data/monitoring/tosca_monitoring_scaling.yaml'
         hot_files = [
             '../tests/data/hot_output/monitoring/hot_monitoring_scaling.yaml',
-            '../tests/data/hot_output/monitoring/asg_res.yaml',
+            '../tests/data/hot_output/monitoring/'
+            'hot_monitoring_scaling_asg.yaml'
         ]
         params = {}
         self._test_successful_translation(tosca_file, hot_files, params)

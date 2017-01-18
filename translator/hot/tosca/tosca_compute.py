@@ -56,7 +56,7 @@ class ToscaCompute(HotResource):
         self.assoc_port_resources = []
         pass
 
-    def handle_properties(self):
+    def handle_properties(self, resources):
         self.properties = self.translate_compute_flavor_and_image(
             self.nodetemplate.get_capability('host'),
             self.nodetemplate.get_capability('os'))
