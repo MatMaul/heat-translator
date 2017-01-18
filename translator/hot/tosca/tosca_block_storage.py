@@ -35,7 +35,7 @@ class ToscaBlockStorage(HotResource):
                                                 csar_dir=csar_dir)
         pass
 
-    def handle_properties(self):
+    def handle_properties(self, resources):
         tosca_props = {}
         for prop in self.nodetemplate.get_properties_objects():
             if isinstance(prop.value, GetInput):

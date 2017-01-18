@@ -9,22 +9,22 @@ resources:
     type: OS::Heat::ScalingPolicy
     properties:
       auto_scaling_group_id:
-        get_resource: SP1_group
+        get_resource: SP1
       adjustment_type: change_in_capacity
       scaling_adjustment: 1
-  SP1_group:
+  SP1:
     type: OS::Heat::AutoScalingGroup
     properties:
       min_size: 1
       desired_capacity: 2
       resource:
-        type: SP1_res.yaml
+        type: hot_tosca_nfv_autoscaling_SP1.yaml
       max_size: 3
   SP1_scale_in:
     type: OS::Heat::ScalingPolicy
     properties:
       auto_scaling_group_id:
-        get_resource: SP1_group
+        get_resource: SP1
       adjustment_type: change_in_capacity
       scaling_adjustment: -1
 outputs: {}

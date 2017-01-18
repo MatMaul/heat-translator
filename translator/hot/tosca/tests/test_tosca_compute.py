@@ -27,7 +27,7 @@ class ToscaComputeTest(TestCase):
         nodetemplate = NodeTemplate(name, nodetemplates)
         nodetemplate.validate()
         toscacompute = ToscaCompute(nodetemplate)
-        toscacompute.handle_properties()
+        toscacompute.handle_properties([])
 
         self.assertEqual(expectedprops, toscacompute.properties)
 

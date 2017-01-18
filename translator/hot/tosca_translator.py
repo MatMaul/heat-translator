@@ -45,8 +45,6 @@ class TOSCATranslator(object):
         self.hot_template.resources = \
             self.node_translator.translate()
         self.hot_template.outputs = self._translate_outputs()
-        if self.node_translator.hot_template_version is None:
-            self.node_translator.hot_template_version = HotTemplate.LATEST
 
     def translate(self):
         """Translate to HOT YAML

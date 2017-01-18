@@ -29,7 +29,7 @@ class ToscaObjectStorage(HotResource):
                                                  csar_dir=csar_dir)
         pass
 
-    def handle_properties(self):
+    def handle_properties(self, resources):
         tosca_props = self.get_tosca_props()
         objectstore_props = {}
         container_quota = {}

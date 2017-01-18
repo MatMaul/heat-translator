@@ -193,3 +193,6 @@ class ToscaClusterAutoscaling(HotResource):
                             properties=scale_in_props)
             resources.append(policy_resources)
         return resources
+
+    def get_hot_version(self):
+        return '2016-04-08'

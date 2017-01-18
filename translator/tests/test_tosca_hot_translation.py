@@ -34,8 +34,7 @@ class ToscaHotTranslationTest(TestCase):
         diff = TranslationUtils.compare_tosca_translation_with_hot(tosca_file,
                                                                    hot_files,
                                                                    params)
-        self.assertEqual({}, diff, '<difference> : ' +
-                         json.dumps(diff, indent=4, separators=(', ', ': ')))
+        self.assertEqual({}, diff, '<difference> : ' + str(diff))
 
     def _test_failed_translation(self, tosca_file, hot_file, params, msg,
                                  msg_path, error_raise, error_collect):
@@ -500,17 +499,11 @@ class ToscaHotTranslationTest(TestCase):
         params = {}
         self._test_successful_translation(tosca_file, hot_file, params)
 
-    def test_hot_exchange_public_ssh_key(self):
-        tosca_file = '../tests/data/tosca_exchange_public_ssh_key.yaml'
-        hot_file = '../tests/data/hot_output/hot_exchange_public_ssh_key.yaml'
-        params = {}
-        self._test_successful_translation(tosca_file, hot_file, params)
-
     def test_hot_translate_scaling_policy(self):
         tosca_file = '../tests/data/autoscaling/tosca_autoscaling.yaml'
         hot_files = [
             '../tests/data/hot_output/autoscaling/hot_autoscaling.yaml',
-            '../tests/data/hot_output/autoscaling/asg_res.yaml',
+            '../tests/data/hot_output/autoscaling/hot_autoscaling_asg.yaml',
             ]
         params = {}
         self._test_successful_translation(tosca_file, hot_files, params)
@@ -539,7 +532,7 @@ class ToscaHotTranslationTest(TestCase):
         tosca_file = '../tests/data/nfv/test_tosca_nfv_autoscaling.yaml'
         hot_files = [
             '../tests/data/hot_output/nfv/hot_tosca_nfv_autoscaling.yaml',
-            '../tests/data/hot_output/nfv/SP1_res.yaml',
+            '../tests/data/hot_output/nfv/hot_tosca_nfv_autoscaling_SP1.yaml',
             ]
         params = {}
         self._test_successful_translation(tosca_file, hot_files, params)

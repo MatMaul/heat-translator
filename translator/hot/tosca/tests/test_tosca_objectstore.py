@@ -26,7 +26,7 @@ class ToscaObjectStoreTest(TestCase):
         try:
             nodetemplate = NodeTemplate(name, nodetemplates)
             tosca_object_store = ToscaObjectStorage(nodetemplate)
-            tosca_object_store.handle_properties()
+            tosca_object_store.handle_properties([])
             if not self._compare_properties(tosca_object_store.properties,
                                             expectedprops):
                 raise Exception(_("Hot Properties are not"

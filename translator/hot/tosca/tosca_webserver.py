@@ -27,5 +27,5 @@ class ToscaWebserver(HotResource):
                                              csar_dir=csar_dir)
         pass
 
-    def handle_properties(self):
+    def handle_properties(self, resources):
         pass
