@@ -536,3 +536,11 @@ class ToscaHotTranslationTest(TestCase):
             ]
         params = {}
         self._test_successful_translation(tosca_file, hot_files, params)
+
+    def test_hot_exchange_ssh_keys(self):
+        tosca_file = '../tests/data/tosca_exchange_ssh_keys.yaml'
+        hot_files = \
+            ['../tests/data/hot_output/hot_exchange_ssh_keys.yaml',
+             '../tests/data/hot_output/hot_exchange_ssh_keys_slave.yaml']
+        params = {}
+        self._test_successful_translation(tosca_file, hot_files, params)

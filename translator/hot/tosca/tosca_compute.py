@@ -12,12 +12,14 @@
 # under the License.
 
 import logging
+import os
 
 from toscaparser.utils.gettextutils import _
 from translator.common import flavors as nova_flavors
 from translator.common import images as glance_images
 import translator.common.utils
 from translator.hot.syntax.hot_resource import HotResource
+from translator.hot.syntax.hot_resourcegroup import HotResourceGroup
 
 
 log = logging.getLogger('heat-translator')
@@ -51,7 +53,7 @@ class ToscaCompute(HotResource):
                                            csar_dir=csar_dir)
         # List with associated hot port resources with this server
         self.assoc_port_resources = []
-        pass
+        self.resourcegroup = None
 
     def handle_properties(self, resources):
         self.properties = self.translate_compute_flavor_and_image(
@@ -62,6 +64,22 @@ class ToscaCompute(HotResource):
         for key, value in tosca_props.items():
             if key in self.ALLOWED_NOVA_SERVER_PROPS:
                 self.properties[key] = value
+
+        scalable_cap = self.nodetemplate.get_capability('scalable')
+        if scalable_cap and scalable_cap.\
+                get_property_value('max_instances') > 1:
+            nb = scalable_cap.get_property_value('default_instances')
+            if not nb or nb < 1:
+                nb = 1
+
+            template, parameters, deps = self.create_substack_from_servers([self], resources)
+            substack_props = {'type': template}
+            if parameters:
+                substack_props['parameters'] = parameters
+
+            resourcegroup = HotResourceGroup(None, self.name, template, parameters, deps, nb)
+
+            resources.append(resourcegroup)
 
     # To be reorganized later based on new development in Glance and Graffiti
     def translate_compute_flavor_and_image(self,
@@ -210,7 +228,8 @@ class ToscaCompute(HotResource):
                   attriute.'))
         if attribute == 'private_address' or \
            attribute == 'public_address':
-                attr['get_attr'] = [self.name, 'networks', 'private', 0]
+            #attr['get_attr'] = [self.name, 'first_address']
+            attr['get_attr'] = [self.name, 'networks', 'private', 0]
 
         return attr
 

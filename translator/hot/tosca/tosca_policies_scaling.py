@@ -157,7 +157,7 @@ class ToscaAutoscaling(HotResource):
                 substack = res.properties['resource']['type']
                 filename = base_filename + "_" + res.name + ext
                 res.properties['resource']['type'] = filename
-                nested_templates[filename] = substack.output_to_yaml(True, hot_template_version)
+                nested_templates[filename] = substack
 
         return nested_templates
 

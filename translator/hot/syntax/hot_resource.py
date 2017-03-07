@@ -585,19 +585,20 @@ class HotResource(object):
 
         substack_template.resources = dependent_resources
 
-        # add standardized TOSCA attributes for addresses of a Compute node
+        # add standardized TOSCA attributes for address of a Compute node
         # TODO(mvelten) Correctly handle networks here
-        # substack_template.outputs.append(
-        #     HotOutput('public_address',
-        #               {'get_attr':
-        #                    [server.name, 'networks', 'private', 0]}))
-        # substack_template.outputs.append(
-        #     HotOutput('private_address',
-        #               {'get_attr':
-        #                    [server.name, 'networks', 'private', 0]}))
+        substack_template.outputs.append(
+            HotOutput('public_address',
+                      {'get_attr':
+                           [server.name, 'networks', 'private', 0]}))
+        substack_template.outputs.append(
+            HotOutput('private_address',
+                      {'get_attr':
+                           [server.name, 'networks', 'private', 0]}))
 
-        for r in dependent_resources:
-            hot_resources.remove(r)
+        # if len(servers) == 1:
+        #     substack_template.outputs.append(HotOutput('first_address',
+        #                                {'get_attr': [servers[0].name, 'first_address']}))
 
         return substack_template, substack_parameters, external_dependencies
 
