@@ -20,6 +20,7 @@ from toscaparser.elements.interfaces import InterfacesDef
 from toscaparser.functions import GetInput
 from toscaparser.nodetemplate import NodeTemplate
 from toscaparser.utils.gettextutils import _
+from translator.hot.syntax.hot_output import HotOutput
 from translator.hot.syntax.hot_parameter import HotParameter
 from translator.hot.syntax.hot_template import HotTemplate
 
@@ -587,7 +588,7 @@ class HotResource(object):
 
         substack_template.resources = dependent_resources
 
-        # add standardized TOSCA attributes for addresses of a Compute node
+        # add standardized TOSCA attributes for address of a Compute node
         # TODO(mvelten) Correctly handle networks here
         # substack_template.outputs.append(
         #     HotOutput('public_address',

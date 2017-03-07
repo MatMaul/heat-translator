@@ -1,0 +1,71 @@
+heat_template_version: 2013-05-23
+
+parameters:
+  master:
+    type: string
+  import_master_public_key_create_deploy_public_key:
+    type: string
+resources:
+  slave:
+    type: OS::Nova::Server
+    properties:
+      flavor: m1.small
+      user_data_format: SOFTWARE_CONFIG
+      image: ubuntu-12.04-software-config-os-init
+  import_master_public_key_create_deploy:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      input_values:
+        public_key:
+          get_param: import_master_public_key_create_deploy_public_key
+      config:
+        get_resource: import_master_public_key_create_config
+      server:
+        get_resource: slave
+  import_master_public_key_create_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config:
+        get_file: artifacts/ssh/ssh_import_public_key.sh
+  generate_ssh_keys_slave_create_deploy:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: generate_ssh_keys_slave_create_config
+      server:
+        get_resource: slave
+  generate_ssh_keys_slave_create_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config:
+        get_file: artifacts/ssh/ssh_generate_keys.sh
+      outputs:
+      - name: public_key
+  import_slave_public_key_create_deploy:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      input_values:
+        public_key:
+          get_attr:
+          - generate_ssh_keys_slave_create_deploy
+          - public_key
+      config:
+        get_resource: import_slave_public_key_create_config
+      server:
+        get_param: master
+    depends_on:
+    - generate_ssh_keys_slave_create_deploy
+  import_slave_public_key_create_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config:
+        get_file: artifacts/ssh/ssh_import_public_key.sh
+outputs:
+  first_address:
+    value:
+      get_attr:
+      - slave
+      - first_address

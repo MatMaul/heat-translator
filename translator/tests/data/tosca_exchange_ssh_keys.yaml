@@ -5,7 +5,26 @@ description: TOSCA template to test get_operation_output by exchanging ssh publi
 topology_template:
 
   node_templates:
-    server1:
+    slave:
+      type: tosca.nodes.Compute
+      capabilities:
+        host:
+         properties:
+           num_cpus: 1
+           mem_size: 1 GB
+        os:
+          properties:
+            type: Linux
+            distribution: Ubuntu
+            version: 12.04
+            architecture: x86_64
+        scalable:
+          properties:
+            min_instances: 1
+            max_instances: 5
+            default_instances: 2
+
+    master:
       type: tosca.nodes.Compute
       capabilities:
         host:
@@ -19,36 +38,42 @@ topology_template:
             version: 12.04
             architecture: x86_64
 
-    server2:
-      type: tosca.nodes.Compute
-      capabilities:
-        host:
-         properties:
-           num_cpus: 1
-           mem_size: 1 GB
-        os:
-          properties:
-            type: Linux
-            distribution: Ubuntu
-            version: 12.04
-            architecture: x86_64
-
-    generate_ssh_key:
+    generate_ssh_keys_master:
       type: tosca.nodes.SoftwareComponent
       interfaces:
         Standard:
           create: artifacts/ssh/ssh_generate_keys.sh
       requirements:
-        - host: server1
+        - host: master
 
-    import_public_key:
+    generate_ssh_keys_slave:
+      type: tosca.nodes.SoftwareComponent
+      interfaces:
+        Standard:
+          create: artifacts/ssh/ssh_generate_keys.sh
+      requirements:
+        - host: slave
+
+    import_master_public_key:
       type: tosca.nodes.SoftwareComponent
       interfaces:
         Standard:
           create:
             implementation: artifacts/ssh/ssh_import_public_key.sh
             inputs:
-              public_key: { get_operation_output: [generate_ssh_key, Standard, create, public_key] }
+              public_key: { get_operation_output: [generate_ssh_keys_master, Standard, create, public_key] }
       requirements:
-        - host: server2
-        - dependency: generate_ssh_key
+        - host: slave
+        - dependency: generate_ssh_keys_master
+
+    import_slave_public_key:
+      type: tosca.nodes.SoftwareComponent
+      interfaces:
+        Standard:
+          create:
+            implementation: artifacts/ssh/ssh_import_public_key.sh
+            inputs:
+              public_key: { get_operation_output: [generate_ssh_keys_slave, Standard, create, public_key] }
+      requirements:
+        - host: master
+        - dependency: generate_ssh_keys_slave
