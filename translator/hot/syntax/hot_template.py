@@ -56,6 +56,9 @@ class HotTemplate(object):
     def output_to_yaml_files_dict(self, base_filename, hot_template_version=None):
         yaml_files_dict = {}
 
+        if not hot_template_version:
+            hot_template_version = self.get_hot_version()
+
         # convert from inlined substack to a substack defined in another file
         substacks = {}
         for resource in self.resources:
@@ -78,17 +81,6 @@ class HotTemplate(object):
 
         if not hot_template_version:
             hot_template_version = self.get_hot_version()
-
-        # if embed_substack_templates:
-        #     # fully inlined substack by storing the template as a blob string
-        #     for resource in self.resources:
-        #         resource.embed_substack_templates(hot_template_version)
-
-        if not embed_substack_templates:
-            for substack_name in substacks:
-                substack = substacks[substack_name]
-                yaml_files_dict
-
 
         dict_output = OrderedDict()
         # Version
