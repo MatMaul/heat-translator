@@ -87,7 +87,7 @@ def get_images():
                        'Openstack Exception: %s') % str(e))
         else:
             for image in client.images.list():
-                image_name = image.name.encode('ascii', 'ignore')
+                image_name = image.id.encode('ascii', 'ignore')
                 metadata = ["architecture", "type", "distribution", "version",
                             "os_distro", "os_type", "os_version"]
                 if any(key in image.keys() for key in metadata):
